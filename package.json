@@ -30,5 +30,6 @@
     "vitest": "^3.2.0",
     "zod": "^4.4.3"
   },
-  "description": "Forward ports opened by agents and terminals on remote Paseo hosts to your laptop's localhost over your own SSH connection."
+  "description": "Forward ports opened by agents and terminals on remote Paseo hosts to your laptop's localhost over your own SSH connection.",
+  "license": "MIT"
 }
