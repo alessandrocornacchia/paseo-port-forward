@@ -6,6 +6,7 @@
   "files": [
     "paseo-plugin.json",
     "OVERVIEW.md",
+    "images/",
     "index.client.tsx",
     "index.server.ts",
     "client/",
@@ -28,5 +29,6 @@
     "typescript": "^5.9.3",
     "vitest": "^3.2.0",
     "zod": "^4.4.3"
-  }
+  },
+  "description": "Forward ports opened by agents and terminals on remote Paseo hosts to your laptop's localhost over your own SSH connection."
 }

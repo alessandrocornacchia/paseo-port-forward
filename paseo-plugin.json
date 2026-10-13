@@ -1,5 +1,7 @@
 {
   "id": "port-forward",
   "name": "Port forwarding",
+  "description": "Forward ports opened by agents and terminals on remote Paseo hosts to your laptop's localhost over your own SSH connection.",
+  "media": ["images/ports-screen.png", "images/sidebar.png"],
   "requirements": { "paseo": ">=0.11.1" }
 }
