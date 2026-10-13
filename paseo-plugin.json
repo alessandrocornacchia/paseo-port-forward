@@ -1,0 +1,5 @@
+{
+  "id": "port-forward",
+  "name": "Port forwarding",
+  "requirements": { "paseo": ">=0.11.1" }
+}

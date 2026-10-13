@@ -1,0 +1,66 @@
+@pidfile
+{"pid":29,"startedAt":"2026-10-13T13:31:53.884Z","hostname":"cf78a9fee339","uid":1001,"listen":"127.0.0.1:6767","heartbeat":true,"bootId":"1ed86785-6515-4682-afcd-fa47f3ee9f41","serverId":"srv_RVCaSQhbaNyq"}
+@listen
+tcp 0100007F:1A6F 2770
+tcp 00000000:0BB8 11885
+tcp 00000000:270F 6816
+tcp 0100007F:A2C1 2769
+tcp 00000000:0016 10778
+tcp6 00000000000000000000000000000000:1435 11896
+tcp6 00000000000000000000000000000000:0016 10779
+@stat
+1 0 7906
+127 52 9827
+146 127 9867
+173 52 9932
+188 173 9971
+189 1 9971
+29 1 8154
+297 1 11563
+303 297 11570
+304 303 11574
+310 304 11575
+311 304 11575
+40 29 8161
+52 40 8212
+59 40 8215
+@owners
+146 11885
+188 11896
+189 6816
+40 2769
+40 2770
+@proc 40
+cwd /home/dev
+comm Paseo Daemon
+cmd Paseo Daemon                                                                                                                    
+
+@proc 52
+cwd /home/dev
+comm node
+cmd /usr/local/bin/node /usr/local/lib/node_modules/@getpaseo/cli/node_modules/@getpaseo/server/dist/server/terminal/terminal-worker-process.js 
+
+@proc 59
+cwd /home/dev
+comm esbuild
+cmd /usr/local/lib/node_modules/@getpaseo/cli/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.12 --ping 
+
+@proc 146
+cwd /home/dev/proj
+comm python3
+cmd python3 -m http.server 3000 
+
+@proc 188
+cwd /home/dev/proj
+comm python3
+cmd python3 -m http.server 5173 --bind :: 
+
+env PASEO_AGENT_CWD=/home/dev/proj
+env PASEO_AGENT_ID=agent-fake-123
+@proc 189
+cwd /home/dev/proj
+comm python3
+cmd python3 -m http.server 9999 
+
+@end
+
