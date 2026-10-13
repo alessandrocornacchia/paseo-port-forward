@@ -4,6 +4,8 @@ A Paseo plugin that adds a **Ports** screen and forwards ports open on a remote 
 
 The plugin runs only on your laptop's Paseo daemon. It reaches remote hosts over your own SSH connection, so it also works for hosts you connect to through the Paseo relay. Nothing is installed on the remote; a read-only scan script runs there over SSH.
 
+![Ports screen](images/ports-screen.png)
+
 ## Setup
 
 1. Install the plugin on the **laptop** daemon:
