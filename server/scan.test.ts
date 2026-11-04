@@ -60,6 +60,18 @@ describe("analyzeScan on a real Linux remote", () => {
     });
   });
 
+  it("keeps terminal ports when the terminal worker is detached from the supervisor", () => {
+    // Paseo 0.15 reparents the terminal worker to init; its processes carry PASEO_TERMINAL_ID.
+    const detached = parseScanOutput(
+      fixture
+        .replace(/^52 40 /m, "52 1 ")
+        .replace(/^(cmd python3 -m http\.server (?:3000|5173) .*)$/gm, "$1\nenv PASEO_TERMINAL_ID=term-fake-1"),
+    );
+    const { ports } = analyzeScan(detached);
+    expect(ports.map((port) => port.port)).toEqual([3000, 5173]);
+    expect(ports[0]).toMatchObject({ process: "python3", agentId: null, cwd: "/home/dev/proj" });
+  });
+
   it("returns nothing without a pid file", () => {
     expect(analyzeScan({ ...raw, pidFile: null }).ports).toEqual([]);
   });

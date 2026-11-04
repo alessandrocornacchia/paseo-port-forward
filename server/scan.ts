@@ -48,7 +48,7 @@ for pid in $(printf '%s\n%s\n' "$(echo "$OWNERS" | awk '{print $1}')" "$ROOTS" |
   echo "cwd $(readlink "/proc/$pid/cwd" 2>/dev/null)"
   echo "comm $(cat "/proc/$pid/comm" 2>/dev/null)"
   printf 'cmd '; tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | cut -c1-400; echo
-  tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -E '^PASEO_AGENT_(ID|CWD)=' | sed 's/^/env /'
+  tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -E '^PASEO_(AGENT_ID|AGENT_CWD|TERMINAL_ID)=' | sed 's/^/env /'
 done
 echo "@end"
 `;
@@ -243,9 +243,11 @@ function isPaseoInternal(cmd: string): boolean {
 }
 
 /**
- * Keep listening sockets owned by processes that descend from the Paseo supervisor,
- * excluding the supervisor, the daemon worker, the daemon's listen port, and anything
- * running under one of the daemon's plugin-host processes.
+ * Keep listening sockets owned by processes that descend from the Paseo supervisor, or
+ * that run in a Paseo terminal (`PASEO_TERMINAL_ID`; since 0.15 the terminal worker is
+ * detached, so its processes no longer descend from the supervisor), excluding the
+ * supervisor, the daemon worker, the daemon's listen port, and anything running under
+ * one of the daemon's plugin-host processes.
  */
 export function analyzeScan(raw: RawScan): ScanResult {
   const supervisor = raw.pidFile?.pid;
@@ -258,10 +260,11 @@ export function analyzeScan(raw: RawScan): ScanResult {
     for (const pid of raw.owners.get(socket.inode) ?? []) {
       const chain = ancestors(pid, raw.parents);
       const depth = chain.indexOf(supervisor);
-      // depth 0: the parent is the supervisor, so `pid` is the daemon worker itself.
-      if (pid === supervisor || depth < 1) continue;
-      const branchRoot = chain[depth - 2] ?? pid;
       const info = raw.procs.get(pid);
+      const inTerminal = depth < 0 && Boolean(info?.env.PASEO_TERMINAL_ID);
+      // depth 0: the parent is the supervisor, so `pid` is the daemon worker itself.
+      if (pid === supervisor || (depth < 1 && !inTerminal)) continue;
+      const branchRoot = chain[depth - 2] ?? pid;
       const rootInfo = raw.procs.get(branchRoot);
       if (info && isPaseoInternal(info.cmd)) continue;
       if (rootInfo?.cmd.includes("plugin-process")) continue;
