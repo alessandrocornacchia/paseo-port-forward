@@ -7,11 +7,15 @@ import {
 } from "@getpaseo/plugin/client/ui";
 import { ScrollView, Text } from "react-native";
 
-import { parsePortList } from "../shared/settings";
+import {
+  formatFixedForwardList,
+  parseFixedForwardList,
+  parsePortList,
+} from "../shared/settings";
 import { usePortSettings } from "./use-port-settings";
 
 export function PortSettingsScreen({ host, theme }: PluginSurfaceProps) {
-  const { state, values, update, setTarget } = usePortSettings();
+  const { state, values, update, setTarget, setFixedForwards } = usePortSettings();
   const remotes = useHosts().filter((candidate) => candidate.serverId !== host.id);
 
   if (!values) {
@@ -36,6 +40,20 @@ export function PortSettingsScreen({ host, theme }: PluginSurfaceProps) {
             initialValue={values.targets[remote.serverId] ?? ""}
             placeholder="not forwarded"
             onChangeText={(text) => void setTarget(remote.serverId, text)}
+          />
+        ))}
+      </SettingsSection>
+      <SettingsSection title="Fixed forwards">
+        {remotes.map((remote) => (
+          <SettingsInput
+            key={remote.serverId}
+            label={remote.label}
+            hint="Persistent remote:local mappings, separated by commas or spaces. Example: 80:8080, 5173:5173"
+            initialValue={formatFixedForwardList(values.fixedForwards[remote.serverId] ?? [])}
+            placeholder="no fixed forwards"
+            onChangeText={(text) =>
+              void setFixedForwards(remote.serverId, parseFixedForwardList(text))
+            }
           />
         ))}
       </SettingsSection>
