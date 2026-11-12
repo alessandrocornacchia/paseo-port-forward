@@ -32,6 +32,7 @@ export const ForwardSchema = z.object({
   status: z.enum(["active", "error"]),
   error: z.string().nullable(),
   auto: z.boolean(),
+  fixed: z.boolean().default(false),
 });
 export type Forward = z.infer<typeof ForwardSchema>;
 

@@ -27,5 +27,16 @@ export function usePortSettings() {
     [update],
   );
 
-  return { state, values, update, setTarget };
+  const setFixedForwards = useCallback(
+    (serverId: string, mappings: PortSettings["fixedForwards"][string]) =>
+      update((current) => {
+        const fixedForwards = { ...current.fixedForwards };
+        if (mappings.length > 0) fixedForwards[serverId] = mappings;
+        else delete fixedForwards[serverId];
+        return { ...current, fixedForwards };
+      }),
+    [update],
+  );
+
+  return { state, values, update, setTarget, setFixedForwards };
 }

@@ -4,6 +4,6 @@ Install it on your laptop's daemon only. It opens its own SSH connection to each
 
 Setup: give each remote host an SSH target (`user@host` or a config alias). Before forwarding, the plugin checks that the machine it reaches reports the same Paseo `serverId`. Password prompts are not supported. Accept a new host key once by hand.
 
-Forwards bind to `127.0.0.1` only and use the same port number when it is free locally, otherwise the next free one. Auto-forward mode forwards new ports on every configured host, skips an ignore list (default 22, 5432, 6379), and removes the forward when the remote port closes. Disabling the plugin closes every forward and SSH connection.
+Forwards bind to `127.0.0.1` only and use the same port number when it is free locally, otherwise the next free one. Fixed forwards instead use exact per-host `remote:local` mappings such as `80:8080, 5173:5173`; they persist across scans and reconnects, work for Docker-published ports absent from the Paseo process scan, and report local-port conflicts rather than choosing another port. Auto-forward mode forwards new ports on every configured host, skips an ignore list (default 22, 5432, 6379), and removes the forward when the remote port closes. Disabling the plugin closes every forward and SSH connection.
 
 Requires Paseo 0.11.1 or later, a macOS or Linux laptop, and Linux remotes.

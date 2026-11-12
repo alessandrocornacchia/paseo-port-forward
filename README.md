@@ -16,7 +16,9 @@ The plugin runs only on your laptop's Paseo daemon. It reaches remote hosts over
 3. Pick a remote host and enter its SSH target: `user@host` or an alias from `~/.ssh/config`. **Test connection** checks that the machine you reach is the same Paseo host (its `~/.paseo/paseo.pid` `serverId` must match).
 4. Press **Forward** on a port. It is served on `http://localhost:<port>`, or the next free port when that one is taken locally.
 
-Settings → Plugins → **Port forwarding** has the SSH targets, auto-forward, the ignore list and the auto-forward poll interval.
+Settings → Plugins → **Port forwarding** has the SSH targets, fixed forwards, auto-forward, the ignore list and the auto-forward poll interval.
+
+**Fixed forwards** are persistent `remote:local` mappings for each SSH target, separated by commas, spaces or newlines (for example `80:8080, 5173:5173`). They work without auto-forward and do not need to appear in the Paseo process scan, so Docker-published ports can be forwarded too. The exact local port is required: if it is already used by another plugin forward, the fixed forward shows an error instead of choosing a different port. Fixed forwards survive remote port scans and SSH reconnects; removing or changing a mapping cancels its old forward.
 
 Requirements:
 - Paseo `>=0.11.1`.
@@ -42,6 +44,7 @@ Laptop daemon
 
   Each port carries the process, command line, `PASEO_AGENT_ID` and `PASEO_AGENT_CWD` from its environment. Terminal processes have no agent id and show their working directory instead.
 - **Forwarding** binds locally to `127.0.0.1` only. Wildcard and loopback remote binds connect to `127.0.0.1` (IPv4) or `localhost` (`::`). Specific addresses are used as-is.
+- **Fixed forwards** use per-host `remote:local` settings such as `80:8080, 5173:5173`. They are applied even when absent from scan results, keep their exact local ports across reconnects, and report local-port conflicts as errors. Removing or changing one cancels the obsolete SSH forward.
 - **Auto-forward** forwards every new port on every host with an SSH target, minus the ignore list (default `22, 5432, 6379`). It removes the forward when the remote port closes. Manual forwards are kept and shown as "closed on remote" until you stop them.
 - **Reconnect:** if the master dies, it reconnects with backoff (1 s up to 30 s) and reapplies the forwards on the same local ports.
 - **Cleanup:**
