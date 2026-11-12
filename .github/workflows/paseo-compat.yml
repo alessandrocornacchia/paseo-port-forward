@@ -8,7 +8,8 @@ name: Paseo compat
 #  - When a check fails, Claude tries a fix: pushed onto the Dependabot
 #    PR, or opened as a new PR for scheduled runs. A human always merges.
 #
-# Secrets: ANTHROPIC_API_KEY (also add it under Dependabot secrets) and
+# Secrets: CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`; uses your Claude
+# subscription; also add it under Dependabot secrets) and
 # PASEO_COMPAT_TOKEN (fine-grained PAT or App token with contents + pull
 # requests write; GITHUB_TOKEN pushes don't re-trigger CI).
 on:
@@ -120,7 +121,7 @@ jobs:
         run: git switch -c "paseo-compat/$(date +%Y%m%d)-${{ github.run_id }}"
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.PASEO_COMPAT_TOKEN }}
           claude_args: --max-turns 60 --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
           prompt: |
