@@ -3,9 +3,9 @@ name: Paseo compat
 # Keeps this plugin working on new Paseo releases.
 #
 #  - Dependabot PRs bumping @getpaseo/* run the check on the bumped versions.
-#  - The weekly schedule checks against npm `latest` (gating) and `beta`
-#    (early warning, never gating) without touching the lockfile.
-#  - When a gating check fails, Claude tries a fix: pushed onto the Dependabot
+#  - The weekly schedule checks against npm `latest` without touching the
+#    lockfile.
+#  - When a check fails, Claude tries a fix: pushed onto the Dependabot
 #    PR, or opened as a new PR for scheduled runs. A human always merges.
 #
 # Secrets: ANTHROPIC_API_KEY (also add it under Dependabot secrets) and
@@ -25,7 +25,7 @@ on:
   workflow_dispatch:
     inputs:
       paseo_version:
-        description: "pinned, latest, beta, or an exact version"
+        description: "pinned, latest, or an exact version"
         default: latest
 
 permissions:
@@ -38,8 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(github.event_name == 'pull_request' && '["pinned"]' || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.paseo_version) || '["latest","beta"]') }}
-    continue-on-error: ${{ matrix.target == 'beta' }}
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["pinned"]' || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.paseo_version) || '["latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,8 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(github.event_name == 'pull_request' && '["pinned"]' || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.paseo_version) || '["latest","beta"]') }}
-    continue-on-error: ${{ matrix.target == 'beta' }}
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["pinned"]' || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.paseo_version) || '["latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

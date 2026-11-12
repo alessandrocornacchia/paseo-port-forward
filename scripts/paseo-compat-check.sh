@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Static compatibility check of this plugin against a Paseo SDK version.
 #
-#   scripts/paseo-compat-check.sh [pinned|latest|beta|<x.y.z>]
+#   scripts/paseo-compat-check.sh [pinned|latest|<x.y.z>]
 #
 # "pinned" checks the versions in package-lock.json as-is. Anything else
 # temporarily overrides every @getpaseo/* dependency (no lockfile change) and
@@ -16,7 +16,7 @@ npm ci --no-audit --no-fund
 
 if [[ "$target" != "pinned" ]]; then
   version="$target"
-  if [[ "$target" == "latest" || "$target" == "beta" ]]; then
+  if [[ "$target" == "latest" ]]; then
     version="$(npm view "@getpaseo/plugin@$target" version | tail -n1)"
   fi
   # Every installed @getpaseo/* package, not just the declared ones: plugin
