@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Paseo SDK bumps arrive as one grouped PR; paseo-compat.yml tests it and,
+  # if it breaks the plugin, asks Claude to push a fix onto the same PR.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: "@getpaseo/*"
+    groups:
+      paseo:
+        patterns: ["@getpaseo/*"]
+    commit-message:
+      prefix: "deps(paseo)"
+    labels: [paseo-compat]

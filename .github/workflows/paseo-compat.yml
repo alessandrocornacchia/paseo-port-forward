@@ -1,0 +1,115 @@
+name: Paseo compat
+
+# Keeps this plugin working on new Paseo releases.
+#
+#  - Dependabot PRs bumping @getpaseo/* run the check on the bumped versions.
+#  - The weekly schedule checks against npm `latest` (gating) and `beta`
+#    (early warning, never gating) without touching the lockfile.
+#  - When a gating check fails, Claude tries a fix: pushed onto the Dependabot
+#    PR, or opened as a new PR for scheduled runs. A human always merges.
+#
+# Secrets: ANTHROPIC_API_KEY (also add it under Dependabot secrets) and
+# PASEO_COMPAT_TOKEN (fine-grained PAT or App token with contents + pull
+# requests write; GITHUB_TOKEN pushes don't re-trigger CI).
+on:
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      paseo_version:
+        description: "pinned, latest, beta, or an exact version"
+        default: latest
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: static (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["pinned"]' || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.paseo_version) || '["latest","beta"]') }}
+    continue-on-error: ${{ matrix.target == 'beta' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check
+        run: |
+          set -o pipefail
+          bash scripts/paseo-compat-check.sh "${{ matrix.target }}" 2>&1 | tee compat.log
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compat-log-${{ matrix.target }}
+          path: compat.log
+
+  # RUNTIME-JOB: filled in once the headless daemon experiment lands.
+
+  fix:
+    name: claude fix
+    needs: [check]
+    if: >-
+      failure() &&
+      !startsWith(github.event.head_commit.message || '', 'fix(paseo-compat)') &&
+      (github.event_name != 'pull_request' || github.actor == 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.PASEO_COMPAT_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          path: logs
+      - name: Branch for scheduled runs
+        if: github.event_name != 'pull_request'
+        run: git switch -c "paseo-compat/$(date +%Y%m%d)-${{ github.run_id }}"
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.PASEO_COMPAT_TOKEN }}
+          claude_args: --max-turns 60 --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+          prompt: |
+            This repository is a Paseo plugin. CI checks it against a newer Paseo
+            SDK (@getpaseo/*) and failed. Failure logs are under ./logs/.
+
+            1. Read the logs and find the root cause.
+            2. Compare the SDK type definitions between the version the plugin was
+               written for (package-lock.json) and the failing one, e.g. diff
+               node_modules/@getpaseo/plugin/dist/**/*.d.ts across both installs.
+            3. Fix the plugin with the smallest change that preserves behaviour.
+               Don't weaken or delete tests to make them pass.
+            4. Verify with `bash scripts/paseo-compat-check.sh <failing target>`.
+            5. If the failing target was not "pinned", bump @getpaseo/* in
+               package.json/package-lock.json and the "paseo" requirement in
+               paseo-plugin.json to that version.
+            6. Commit with a message starting "fix(paseo-compat):" explaining the
+               SDK change and the fix. Don't push.
+            If you can't make it pass, commit nothing and explain why.
+      - name: Push and open PR
+        env:
+          GH_TOKEN: ${{ secrets.PASEO_COMPAT_TOKEN }}
+        run: |
+          base="origin/${{ github.head_ref || github.ref_name }}"
+          if [ -z "$(git log --oneline "$base..HEAD")" ]; then
+            echo "::warning::Claude could not produce a fix; see the job log."
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            git push origin "HEAD:${{ github.head_ref }}"
+          else
+            git push -u origin HEAD
+            gh pr create --fill --label paseo-compat
+          fi
