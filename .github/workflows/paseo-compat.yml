@@ -12,7 +12,14 @@ name: Paseo compat
 # PASEO_COMPAT_TOKEN (fine-grained PAT or App token with contents + pull
 # requests write; GITHUB_TOKEN pushes don't re-trigger CI).
 on:
+  # Only PRs that can change the SDK; regular CI covers everything else.
   pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - paseo-plugin.json
+      - .github/workflows/paseo-compat.yml
+      - scripts/paseo-compat-check.sh
   schedule:
     - cron: "0 5 * * 1"
   workflow_dispatch:
@@ -48,14 +55,51 @@ jobs:
           name: compat-log-${{ matrix.target }}
           path: compat.log
 
-  # RUNTIME-JOB: filled in once the headless daemon experiment lands.
+  # Loads the plugin into a throwaway headless daemon of the target Paseo
+  # version. Catches load-time crashes and unresolvable imports (server and
+  # client bundles); type errors and UI behaviour are the static job's part.
+  runtime:
+    name: runtime (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(github.event_name == 'pull_request' && '["pinned"]' || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.paseo_version) || '["latest","beta"]') }}
+    continue-on-error: ${{ matrix.target == 'beta' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install non-host dependencies
+        # The daemon provides @getpaseo/*, zod, react, react-native and
+        # react-query; anything else must ship in the plugin's node_modules.
+        run: |
+          extra=$(node -p 'Object.keys(require("./package.json").dependencies || {}).filter((d) => !/^(@getpaseo\/|zod$|react$|react-native$|@tanstack\/react-query$)/.test(d)).length' 2>/dev/null || echo 0)
+          if [ "$extra" != 0 ]; then npm ci --omit=dev --no-audit --no-fund; fi
+      - name: Smoke test
+        run: |
+          set -o pipefail
+          version="${{ matrix.target }}"
+          if [ "$version" = pinned ]; then
+            version=$(node -p 'require("./package-lock.json").packages["node_modules/@getpaseo/plugin"].version')
+          fi
+          bash scripts/paseo-runtime-smoke.sh . "$version" 2>&1 | tee runtime.log
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-log-${{ matrix.target }}
+          path: runtime.log
 
   fix:
     name: claude fix
-    needs: [check]
+    needs: [check, runtime]
+    # Only Dependabot-authored PR runs and scheduled/manual runs get a fix.
+    # Claude's own push is authored by the PASEO_COMPAT_TOKEN owner, so it
+    # re-runs the checks but never triggers another fix (one attempt per bump).
     if: >-
       failure() &&
-      !startsWith(github.event.head_commit.message || '', 'fix(paseo-compat)') &&
       (github.event_name != 'pull_request' || github.actor == 'dependabot[bot]')
     runs-on: ubuntu-latest
     permissions:
@@ -91,10 +135,13 @@ jobs:
                node_modules/@getpaseo/plugin/dist/**/*.d.ts across both installs.
             3. Fix the plugin with the smallest change that preserves behaviour.
                Don't weaken or delete tests to make them pass.
-            4. Verify with `bash scripts/paseo-compat-check.sh <failing target>`.
+            4. Verify with `bash scripts/paseo-compat-check.sh <failing target>`
+               and, if a runtime log failed, `bash scripts/paseo-runtime-smoke.sh . <version>`.
             5. If the failing target was not "pinned", bump @getpaseo/* in
-               package.json/package-lock.json and the "paseo" requirement in
-               paseo-plugin.json to that version.
+               package.json/package-lock.json to that version. Raise the "paseo"
+               requirement in paseo-plugin.json only if the fix uses an API the
+               current minimum lacks; prefer runtime feature checks so older
+               daemons keep working.
             6. Commit with a message starting "fix(paseo-compat):" explaining the
                SDK change and the fix. Don't push.
             If you can't make it pass, commit nothing and explain why.
@@ -111,5 +158,6 @@ jobs:
             git push origin "HEAD:${{ github.head_ref }}"
           else
             git push -u origin HEAD
+            gh label create paseo-compat --color 5319e7 2>/dev/null || true
             gh pr create --fill --label paseo-compat
           fi

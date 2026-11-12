@@ -5,7 +5,8 @@
 #
 # "pinned" checks the versions in package-lock.json as-is. Anything else
 # temporarily overrides every @getpaseo/* dependency (no lockfile change) and
-# then runs the same typecheck / lint / test as normal CI.
+# then runs the same typecheck / lint / test as normal CI. Locally, node_modules
+# stays on the overridden SDK afterwards; `npm ci` restores the pinned one.
 set -euo pipefail
 
 target="${1:-pinned}"
@@ -18,11 +19,9 @@ if [[ "$target" != "pinned" ]]; then
   if [[ "$target" == "latest" || "$target" == "beta" ]]; then
     version="$(npm view "@getpaseo/plugin@$target" version | tail -n1)"
   fi
-  pkgs=$(node -e '
-    const p = require("./package.json");
-    const deps = { ...p.dependencies, ...p.devDependencies };
-    console.log(Object.keys(deps).filter((d) => d.startsWith("@getpaseo/")).join(" "));
-  ')
+  # Every installed @getpaseo/* package, not just the declared ones: plugin
+  # pulls in protocol as a peer, and mixing SDK versions gives false results.
+  pkgs=$(ls node_modules/@getpaseo | sed 's|^|@getpaseo/|' | tr '\n' ' ')
   echo "::notice::Checking against Paseo SDK $version ($pkgs)"
   # shellcheck disable=SC2046
   npm install --no-save --no-audit --no-fund $(for p in $pkgs; do echo "$p@$version"; done)
