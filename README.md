@@ -34,7 +34,7 @@ Laptop daemon
    └─ forwards: ssh -S <sock> -O forward|cancel -L 127.0.0.1:<lport>:<host>:<rport>
 ```
 
-- **Detection** reads `/proc/net/tcp{,6}` for `LISTEN` sockets and maps socket inodes to pids through `/proc/<pid>/fd`. It keeps only processes descending from the Paseo supervisor in `~/.paseo/paseo.pid`. It drops:
+- **Detection** reads `/proc/net/tcp{,6}` for `LISTEN` sockets and maps socket inodes to pids through `/proc/<pid>/fd`. It keeps only processes descending from the Paseo supervisor in `~/.paseo/paseo.pid`, plus processes whose environment has `PASEO_TERMINAL_ID` (Paseo 0.15 detaches the terminal worker from the supervisor). It drops:
   - the supervisor and the daemon worker;
   - the daemon's listen port;
   - Paseo's own helpers (terminal worker, esbuild);
